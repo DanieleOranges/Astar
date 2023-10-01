@@ -8,7 +8,7 @@
 #include <opencv2/opencv.hpp>
 #include "Astar.h"
 #include "OccMapTransform.h"
-
+#include <nav_msgs/Odometry.h>
 
 using namespace cv;
 using namespace std;
@@ -86,9 +86,20 @@ void MapCallback(const nav_msgs::OccupancyGrid& msg)
     targetpoint_flag = false;
 }
 
-void StartPointCallback(const geometry_msgs::PoseWithCovarianceStamped& msg)
+void StartPointCallback(const nav_msgs::Odometry::ConstPtr& odom_msg)
 {
-    Point2d src_point = Point2d(msg.pose.pose.position.x, msg.pose.pose.position.y);
+    double x_odom = odom_msg->pose.pose.position.x;
+    double y_odom = odom_msg->pose.pose.position.y;
+
+    // Translate to lidar sensor coordinate
+    double yaw = tf::getYaw(odom_msg->pose.pose.orientation);
+    double cos_yaw = cos(yaw);
+    double sin_yaw = sin(yaw);
+    double l = 1.56;
+    double x = x_odom + l * cos_yaw;
+    double y = y_odom + l * sin_yaw;
+    
+    Point2d src_point = Point2d(x,y);
     OccGridParam.Map2ImageTransform(src_point, startPoint);
 
     // Set flag
@@ -140,8 +151,8 @@ int main(int argc, char * argv[])
     nh_priv.param<int>("rate", rate, 10);
 
     // Subscribe topics
-    map_sub = nh.subscribe("map", 10, MapCallback);
-    startPoint_sub = nh.subscribe("initialpose", 10, StartPointCallback);
+    map_sub = nh.subscribe("/map", 10, MapCallback);
+    startPoint_sub = nh.subscribe("/odom_base", 10, StartPointCallback);
     targetPoint_sub = nh.subscribe("move_base_simple/goal", 10, TargetPointtCallback);
 
     // Advertise topics

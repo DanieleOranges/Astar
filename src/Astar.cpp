@@ -118,6 +118,9 @@ Node* Astar::FindPath()
 
     while(!OpenList.empty())
     {
+        // Start time
+        double time = (double)getTickCount();
+
         // Find the node with least F value
         Point CurPoint = OpenList.top().second;
         OpenList.pop();
